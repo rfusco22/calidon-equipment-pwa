@@ -3,7 +3,7 @@
 import { AppSidebar } from "./app-sidebar"
 import { MobileNav } from "./mobile-nav"
 import { Toaster } from "@/components/ui/sonner"
-import { useEffect } from "react"
+import { useEffect, useCallback } from "react"
 import { seedDemoData } from "@/lib/store"
 import { useServiceWorker } from "@/hooks/use-service-worker"
 import { AuthProvider, useAuth } from "@/lib/auth"
@@ -15,11 +15,19 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const isLoginPage = pathname === "/"
 
+  const runSeed = useCallback(async () => {
+    try {
+      await seedDemoData()
+    } catch {
+      // ignore seed errors
+    }
+  }, [])
+
   useEffect(() => {
     if (isAuthenticated) {
-      seedDemoData()
+      runSeed()
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, runSeed])
 
   // Redirect unauthenticated users to login (except if already on login)
   useEffect(() => {

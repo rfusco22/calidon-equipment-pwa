@@ -55,6 +55,7 @@ export function MachineForm({ machine }: MachineFormProps) {
   const [salePrice, setSalePrice] = useState(machine?.salePrice?.toString() || "0")
   const [photo, setPhoto] = useState<string | null>(machine?.photo || null)
   const [expenses, setExpenses] = useState<Expense[]>(machine?.expenses || [])
+  const [saving, setSaving] = useState(false)
 
   // Expense form
   const [showExpenseForm, setShowExpenseForm] = useState(false)
@@ -80,7 +81,7 @@ export function MachineForm({ machine }: MachineFormProps) {
     reader.readAsDataURL(file)
   }
 
-  function handleAddExpense() {
+  async function handleAddExpense() {
     if (!expenseDesc || !expenseAmount) {
       toast.error("Complete todos los campos del gasto")
       return
@@ -88,11 +89,16 @@ export function MachineForm({ machine }: MachineFormProps) {
 
     if (editingExpense) {
       if (isEditing && machine) {
-        updateExpense(machine.id, editingExpense, {
-          date: expenseDate,
-          description: expenseDesc,
-          amount: parseFloat(expenseAmount),
-        })
+        try {
+          await updateExpense(machine.id, editingExpense, {
+            date: expenseDate,
+            description: expenseDesc,
+            amount: parseFloat(expenseAmount),
+          })
+        } catch {
+          toast.error("Error al actualizar gasto")
+          return
+        }
       }
       setExpenses((prev) =>
         prev.map((e) =>
@@ -110,7 +116,13 @@ export function MachineForm({ machine }: MachineFormProps) {
         amount: parseFloat(expenseAmount),
       }
       if (isEditing && machine) {
-        addExpense(machine.id, { date: expenseDate, description: expenseDesc, amount: parseFloat(expenseAmount) })
+        try {
+          const created = await addExpense(machine.id, { date: expenseDate, description: expenseDesc, amount: parseFloat(expenseAmount) })
+          newExpense.id = created.id
+        } catch {
+          toast.error("Error al agregar gasto")
+          return
+        }
       }
       setExpenses((prev) => [...prev, newExpense])
     }
@@ -130,19 +142,26 @@ export function MachineForm({ machine }: MachineFormProps) {
     setShowExpenseForm(true)
   }
 
-  function handleDeleteExpense(expenseId: string) {
+  async function handleDeleteExpense(expenseId: string) {
     if (isEditing && machine) {
-      removeExpense(machine.id, expenseId)
+      try {
+        await removeExpense(machine.id, expenseId)
+      } catch {
+        toast.error("Error al eliminar gasto")
+        return
+      }
     }
     setExpenses((prev) => prev.filter((e) => e.id !== expenseId))
     toast.success("Gasto eliminado")
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!item || !itemNumber) {
       toast.error("Complete los campos obligatorios: Item y Numero de Item")
       return
     }
+
+    setSaving(true)
 
     const data = {
       item,
@@ -161,14 +180,20 @@ export function MachineForm({ machine }: MachineFormProps) {
       expenses,
     }
 
-    if (isEditing && machine) {
-      updateMachine(machine.id, data)
-      toast.success("Maquinaria actualizada correctamente")
-      router.push(`/maquina/${machine.id}`)
-    } else {
-      const newMachine = addMachine(data)
-      toast.success("Maquinaria registrada correctamente")
-      router.push(`/maquina/${newMachine.id}`)
+    try {
+      if (isEditing && machine) {
+        await updateMachine(machine.id, data)
+        toast.success("Maquinaria actualizada correctamente")
+        router.push(`/maquina/${machine.id}`)
+      } else {
+        const newMachine = await addMachine(data)
+        toast.success("Maquinaria registrada correctamente")
+        router.push(`/maquina/${newMachine.id}`)
+      }
+    } catch {
+      toast.error("Error al guardar maquinaria")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -408,10 +433,15 @@ export function MachineForm({ machine }: MachineFormProps) {
           {/* Save Button */}
           <button
             onClick={handleSubmit}
-            className="animate-fade-in-up flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98]"
+            disabled={saving}
+            className="animate-fade-in-up flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-xl hover:shadow-primary/30 active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none"
             style={{ animationDelay: "200ms" }}
           >
-            <Save className="h-4 w-4" />
+            {saving ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             {isEditing ? "Actualizar Maquinaria" : "Guardar Maquinaria"}
           </button>
         </div>
@@ -462,9 +492,7 @@ function CostRow({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <span className={`text-xs ${bold ? "font-semibold text-card-foreground" : "text-muted-foreground"}`}>
-        {label}
-      </span>
+      <span className={`text-xs ${bold ? "font-semibold" : ""} text-muted-foreground`}>{label}</span>
       <span className={`font-mono text-sm ${bold ? "font-bold" : "font-medium"} ${className || "text-card-foreground"}`}>
         {formatCurrency(value)}
       </span>

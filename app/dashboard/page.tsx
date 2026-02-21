@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import useSWR from "swr"
 import {
   Truck,
   DollarSign,
@@ -10,7 +10,7 @@ import {
   BarChart3,
 } from "lucide-react"
 import { KPICard } from "@/components/kpi-card"
-import { getDashboardStats, getMonthlyData, getAllMachines } from "@/lib/store"
+import { getDashboardStats, getMonthlyData, fetchMachines } from "@/lib/store"
 import type { Machine } from "@/lib/store"
 import {
   BarChart,
@@ -37,17 +37,19 @@ function formatCurrency(value: number) {
 const STATUS_COLORS = ["oklch(0.75 0.16 55)", "oklch(0.55 0.08 55)", "oklch(0.4 0 0)"]
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState<ReturnType<typeof getDashboardStats> | null>(null)
-  const [monthlyData, setMonthlyData] = useState<ReturnType<typeof getMonthlyData>>([])
-  const [recentMachines, setRecentMachines] = useState<Machine[]>([])
+  const { data: machines = [], isLoading } = useSWR<Machine[]>("/api/machines", fetchMachines)
 
-  useEffect(() => {
-    setStats(getDashboardStats())
-    setMonthlyData(getMonthlyData())
-    setRecentMachines(getAllMachines().slice(-5).reverse())
-  }, [])
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
+  }
 
-  if (!stats) return null
+  const stats = getDashboardStats(machines)
+  const monthlyData = getMonthlyData(machines)
+  const recentMachines = [...machines].slice(0, 5)
 
   const pieData = [
     { name: "Vendidos", value: stats.soldMachines },

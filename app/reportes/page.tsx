@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { getAllMachines, getDashboardStats, getMonthlyData } from "@/lib/store"
+import useSWR from "swr"
+import { fetchMachines, getDashboardStats, getMonthlyData } from "@/lib/store"
 import type { Machine } from "@/lib/store"
 import {
   BarChart,
@@ -11,8 +11,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -41,17 +39,18 @@ function formatCurrency(value: number) {
 const COLORS = ["oklch(0.75 0.16 55)", "oklch(0.55 0.08 55)", "oklch(0.4 0 0)", "oklch(0.65 0.12 55)"]
 
 export default function ReportesPage() {
-  const [machines, setMachines] = useState<Machine[]>([])
-  const [stats, setStats] = useState<ReturnType<typeof getDashboardStats> | null>(null)
-  const [monthlyData, setMonthlyData] = useState<ReturnType<typeof getMonthlyData>>([])
+  const { data: machines = [], isLoading } = useSWR<Machine[]>("/api/machines", fetchMachines)
 
-  useEffect(() => {
-    setMachines(getAllMachines())
-    setStats(getDashboardStats())
-    setMonthlyData(getMonthlyData())
-  }, [])
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
+  }
 
-  if (!stats) return null
+  const stats = getDashboardStats(machines)
+  const monthlyData = getMonthlyData(machines)
 
   // Top profitable machines
   const soldMachines = machines

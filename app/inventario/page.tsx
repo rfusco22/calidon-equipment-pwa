@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import Link from "next/link"
-import { getAllMachines, deleteMachine } from "@/lib/store"
+import useSWR from "swr"
+import { deleteMachine, fetchMachines } from "@/lib/store"
 import type { Machine } from "@/lib/store"
 import {
   Truck,
@@ -41,13 +42,9 @@ const statusMap = {
 }
 
 export default function InventarioPage() {
-  const [machines, setMachines] = useState<Machine[]>([])
+  const { data: machines = [], mutate, isLoading } = useSWR<Machine[]>("/api/machines", fetchMachines)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-
-  useEffect(() => {
-    setMachines(getAllMachines())
-  }, [])
 
   const filtered = machines.filter((m) => {
     const matchSearch =
@@ -59,10 +56,22 @@ export default function InventarioPage() {
     return matchSearch && matchStatus
   })
 
-  function handleDelete(id: string) {
-    deleteMachine(id)
-    setMachines(getAllMachines())
-    toast.success("Maquinaria eliminada correctamente")
+  async function handleDelete(id: string) {
+    try {
+      await deleteMachine(id)
+      await mutate()
+      toast.success("Maquinaria eliminada correctamente")
+    } catch {
+      toast.error("Error al eliminar maquinaria")
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    )
   }
 
   return (

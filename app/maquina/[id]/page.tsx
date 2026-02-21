@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
-import { getMachineById, deleteMachine } from "@/lib/store"
+import useSWR from "swr"
+import { deleteMachine, fetchMachine } from "@/lib/store"
 import type { Machine } from "@/lib/store"
 import {
   ArrowLeft,
@@ -49,21 +49,18 @@ const statusMap = {
 export default function MachineDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const [machine, setMachine] = useState<Machine | null>(null)
-  const [loading, setLoading] = useState(true)
+  const id = params.id as string
+  const { data: machine, isLoading, error } = useSWR<Machine>(
+    id ? `/api/machines/${id}` : null,
+    fetchMachine
+  )
 
-  useEffect(() => {
-    const id = params.id as string
-    const m = getMachineById(id)
-    if (!m) {
-      router.push("/inventario")
-      return
-    }
-    setMachine(m)
-    setLoading(false)
-  }, [params.id, router])
+  if (error) {
+    router.push("/inventario")
+    return null
+  }
 
-  if (loading || !machine) {
+  if (isLoading || !machine) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -77,10 +74,14 @@ export default function MachineDetailPage() {
   const profit40 = totalCost * 0.4
   const minSalePrice = totalCost + profit40
 
-  function handleDelete() {
-    deleteMachine(machine!.id)
-    toast.success("Maquinaria eliminada")
-    router.push("/inventario")
+  async function handleDelete() {
+    try {
+      await deleteMachine(machine!.id)
+      toast.success("Maquinaria eliminada")
+      router.push("/inventario")
+    } catch {
+      toast.error("Error al eliminar maquinaria")
+    }
   }
 
   return (

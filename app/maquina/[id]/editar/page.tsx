@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { getMachineById } from "@/lib/store"
+import useSWR from "swr"
+import { fetchMachine } from "@/lib/store"
 import type { Machine } from "@/lib/store"
 import { MachineForm } from "@/components/machine-form"
 import { ArrowLeft } from "lucide-react"
@@ -11,21 +11,18 @@ import Link from "next/link"
 export default function EditarMaquinaPage() {
   const params = useParams()
   const router = useRouter()
-  const [machine, setMachine] = useState<Machine | null>(null)
-  const [loading, setLoading] = useState(true)
+  const id = params.id as string
+  const { data: machine, isLoading, error } = useSWR<Machine>(
+    id ? `/api/machines/${id}` : null,
+    fetchMachine
+  )
 
-  useEffect(() => {
-    const id = params.id as string
-    const m = getMachineById(id)
-    if (!m) {
-      router.push("/inventario")
-      return
-    }
-    setMachine(m)
-    setLoading(false)
-  }, [params.id, router])
+  if (error) {
+    router.push("/inventario")
+    return null
+  }
 
-  if (loading || !machine) {
+  if (isLoading || !machine) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
