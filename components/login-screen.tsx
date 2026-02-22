@@ -46,7 +46,7 @@ export function LoginScreen() {
       <div className="relative z-10 w-full max-w-sm px-6">
         {/* Logo & Header */}
         <div className="mb-10 flex flex-col items-center animate-fade-in-up">
-          <div className="relative mb-6 h-16 w-48">
+          <div className="relative mb-6 h-20 w-64">
             <Image
               src="/images/callidon-logo.png"
               alt="Callidon Equipment"

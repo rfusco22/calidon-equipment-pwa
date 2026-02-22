@@ -35,20 +35,26 @@ export function AppSidebar() {
       )}
     >
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-        <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-sidebar-accent">
-          <Image
-            src="/images/callidon-logo.png"
-            alt="Callidon Equipment"
-            fill
-            className="object-contain p-0.5"
-            priority
-          />
-        </div>
-        {!collapsed && (
-          <div className="animate-fade-in overflow-hidden">
-            <p className="text-sm font-semibold tracking-tight text-sidebar-foreground">Callidon</p>
-            <p className="text-xs text-sidebar-foreground/50">Equipment</p>
+      <div className="flex h-16 items-center justify-center border-b border-sidebar-border px-4">
+        {collapsed ? (
+          <div className="relative h-10 w-10 shrink-0 overflow-hidden">
+            <Image
+              src="/images/callidon-logo.png"
+              alt="Callidon Equipment"
+              fill
+              className="object-contain"
+              priority
+            />
+          </div>
+        ) : (
+          <div className="relative h-10 w-44 animate-fade-in">
+            <Image
+              src="/images/callidon-logo.png"
+              alt="Callidon Equipment"
+              fill
+              className="object-contain"
+              priority
+            />
           </div>
         )}
       </div>
