@@ -37,7 +37,18 @@ function formatCurrency(value: number) {
 const STATUS_COLORS = ["oklch(0.75 0.16 55)", "oklch(0.55 0.08 55)", "oklch(0.4 0 0)"]
 
 export default function DashboardPage() {
-  const { data: machines = [], isLoading } = useSWR<Machine[]>("/api/machines", fetchMachines)
+  const { data: machines = [], isLoading, error } = useSWR<Machine[]>("/api/machines", fetchMachines)
+
+  console.log("[v0] Dashboard - isLoading:", isLoading, "error:", error, "machines count:", machines.length, "machines:", machines)
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-4">
+        <p className="text-destructive font-medium">Error cargando datos</p>
+        <p className="text-sm text-muted-foreground">{error.message}</p>
+      </div>
+    )
+  }
 
   if (isLoading) {
     return (

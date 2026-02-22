@@ -4,8 +4,10 @@ import { randomUUID } from "crypto"
 
 export async function GET() {
   try {
+    console.log("[v0] GET /api/machines - Fetching from Turso DB...")
     const machinesResult = await turso.execute("SELECT * FROM machines ORDER BY created_at DESC")
     const expensesResult = await turso.execute("SELECT * FROM expenses ORDER BY date ASC")
+    console.log("[v0] Machines found:", machinesResult.rows.length, "Expenses found:", expensesResult.rows.length)
 
     const expensesByMachine: Record<string, Array<{ id: string; date: string; description: string; amount: number }>> = {}
     for (const row of expensesResult.rows) {
