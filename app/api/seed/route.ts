@@ -1,4 +1,4 @@
-import { turso } from "@/lib/turso"
+import { query } from "@/lib/mysql"
 import { NextResponse } from "next/server"
 
 // UUID v4 generator
@@ -12,8 +12,8 @@ function generateUUID(): string {
 
 export async function POST() {
   try {
-    const existing = await turso.execute("SELECT COUNT(*) as count FROM machines")
-    const count = existing.rows[0].count as number
+    const existing = await query("SELECT COUNT(*) as count FROM machines")
+    const count = (existing as any[])[0].count as number
     if (count > 0) {
       return NextResponse.json({ message: "Database already has data", seeded: false })
     }
@@ -133,17 +133,20 @@ export async function POST() {
       const id = generateUUID()
       const now = new Date().toISOString()
 
-      await turso.execute({
-        sql: `INSERT INTO machines (id, item, purchase_date, purchased_by, item_number, serial, hours, cost, transport, location, observations, sale_status, photo, sale_price, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [id, m.item, m.purchaseDate, m.purchasedBy, m.itemNumber, m.serial, m.hours, m.cost, m.transport, m.location, m.observations, m.saleStatus, null, m.salePrice, now, now],
-      })
+      await query(
+        `INSERT INTO machines (id, item, purchase_date, purchased_by, item_number, serial, hours, cost, transport, location, observations, sale_status, photo, sale_price, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, m.item, m.purchaseDate, m.purchasedBy, m.itemNumber, m.serial, m.hours, m.cost, m.transport, m.location, m.observations, m.saleStatus, null, m.salePrice, now, now]
+      )
 
       for (const exp of m.expenses) {
-        await turso.execute({
-          sql: "INSERT INTO expenses (id, machine_id, date, description, amount) VALUES (?, ?, ?, ?, ?)",
-          args: [generateUUID(), id, exp.date, exp.description, exp.amount],
-        })
+        await query("INSERT INTO expenses (id, machine_id, date, description, amount) VALUES (?, ?, ?, ?, ?)", [
+          generateUUID(),
+          id,
+          exp.date,
+          exp.description,
+          exp.amount,
+        ])
       }
     }
 

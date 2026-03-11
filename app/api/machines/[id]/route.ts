@@ -1,50 +1,42 @@
-import { turso } from "@/lib/turso"
+import { query } from "@/lib/mysql"
 import { NextResponse } from "next/server"
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    const machineResult = await turso.execute({
-      sql: "SELECT * FROM machines WHERE id = ?",
-      args: [id],
-    })
+    const machines = await query("SELECT * FROM machines WHERE id = ?", [id])
 
-    if (machineResult.rows.length === 0) {
+    if ((machines as any[]).length === 0) {
       return NextResponse.json({ error: "Machine not found" }, { status: 404 })
     }
 
-    const row = machineResult.rows[0]
-    const expensesResult = await turso.execute({
-      sql: "SELECT * FROM expenses WHERE machine_id = ? ORDER BY date ASC",
-      args: [id],
-    })
+    const machine = (machines as any[])[0]
+    const expenses = await query("SELECT * FROM expenses WHERE machine_id = ? ORDER BY date ASC", [id])
 
-    const machine = {
-      id: row.id as string,
-      item: row.item as string,
-      purchaseDate: row.purchase_date as string,
-      purchasedBy: row.purchased_by as string,
-      itemNumber: row.item_number as string,
-      serial: row.serial as string,
-      hours: row.hours as string,
-      cost: row.cost as number,
-      transport: row.transport as number,
-      location: row.location as string,
-      observations: row.observations as string,
-      saleStatus: row.sale_status as "no_vendido" | "vendido" | "en_negociacion",
-      photo: row.photo as string | null,
-      salePrice: row.sale_price as number,
-      createdAt: row.created_at as string,
-      updatedAt: row.updated_at as string,
-      expenses: expensesResult.rows.map((e) => ({
-        id: e.id as string,
-        date: e.date as string,
-        description: e.description as string,
-        amount: e.amount as number,
+    return NextResponse.json({
+      id: machine.id,
+      item: machine.item,
+      purchaseDate: machine.purchase_date,
+      purchasedBy: machine.purchased_by,
+      itemNumber: machine.item_number,
+      serial: machine.serial,
+      hours: machine.hours,
+      cost: machine.cost,
+      transport: machine.transport,
+      location: machine.location,
+      observations: machine.observations,
+      saleStatus: machine.sale_status,
+      photo: machine.photo,
+      salePrice: machine.sale_price,
+      createdAt: machine.created_at,
+      updatedAt: machine.updated_at,
+      expenses: (expenses as any[]).map((e) => ({
+        id: e.id,
+        date: e.date,
+        description: e.description,
+        amount: e.amount,
       })),
-    }
-
-    return NextResponse.json(machine)
+    })
   } catch (error) {
     console.error("Error fetching machine:", error)
     return NextResponse.json({ error: "Failed to fetch machine" }, { status: 500 })
@@ -57,13 +49,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     const data = await request.json()
     const now = new Date().toISOString()
 
-    await turso.execute({
-      sql: `UPDATE machines SET
-            item = ?, purchase_date = ?, purchased_by = ?, item_number = ?, serial = ?,
-            hours = ?, cost = ?, transport = ?, location = ?, observations = ?,
-            sale_status = ?, photo = ?, sale_price = ?, updated_at = ?
-            WHERE id = ?`,
-      args: [
+    await query(
+      `UPDATE machines SET item = ?, purchase_date = ?, purchased_by = ?, item_number = ?, serial = ?, hours = ?, cost = ?, transport = ?, location = ?, observations = ?, sale_status = ?, sale_price = ?, updated_at = ? WHERE id = ?`,
+      [
         data.item,
         data.purchaseDate,
         data.purchasedBy || "",
@@ -75,12 +63,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         data.location || "",
         data.observations || "",
         data.saleStatus || "no_vendido",
-        data.photo || null,
         data.salePrice || 0,
         now,
         id,
-      ],
-    })
+      ]
+    )
 
     return NextResponse.json({ id, ...data, updatedAt: now })
   } catch (error) {
@@ -89,11 +76,16 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params
-    await turso.execute({ sql: "DELETE FROM expenses WHERE machine_id = ?", args: [id] })
-    await turso.execute({ sql: "DELETE FROM machines WHERE id = ?", args: [id] })
+
+    // Delete expenses first
+    await query("DELETE FROM expenses WHERE machine_id = ?", [id])
+
+    // Delete machine
+    await query("DELETE FROM machines WHERE id = ?", [id])
+
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting machine:", error)

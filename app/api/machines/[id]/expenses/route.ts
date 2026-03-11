@@ -1,4 +1,4 @@
-import { turso } from "@/lib/turso"
+import { query } from "@/lib/mysql"
 import { NextResponse } from "next/server"
 
 // UUID v4 generator
@@ -15,16 +15,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const { id: machineId } = await params
     const data = await request.json()
     const id = generateUUID()
+    const now = new Date().toISOString()
 
-    await turso.execute({
-      sql: "INSERT INTO expenses (id, machine_id, date, description, amount) VALUES (?, ?, ?, ?, ?)",
-      args: [id, machineId, data.date, data.description, data.amount],
-    })
+    await query("INSERT INTO expenses (id, machine_id, date, description, amount) VALUES (?, ?, ?, ?, ?)", [
+      id,
+      machineId,
+      data.date,
+      data.description,
+      data.amount,
+    ])
 
-    await turso.execute({
-      sql: "UPDATE machines SET updated_at = ? WHERE id = ?",
-      args: [new Date().toISOString(), machineId],
-    })
+    await query("UPDATE machines SET updated_at = ? WHERE id = ?", [now, machineId])
 
     return NextResponse.json({ id, ...data })
   } catch (error) {

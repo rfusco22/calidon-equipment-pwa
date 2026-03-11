@@ -1,4 +1,4 @@
-import { turso } from "@/lib/turso"
+import { query } from "@/lib/mysql"
 import { NextResponse } from "next/server"
 
 // UUID v4 generator
@@ -12,11 +12,11 @@ function generateUUID(): string {
 
 export async function GET() {
   try {
-    const machinesResult = await turso.execute("SELECT * FROM machines ORDER BY created_at DESC")
-    const expensesResult = await turso.execute("SELECT * FROM expenses ORDER BY date ASC")
+    const machines = await query("SELECT * FROM machines ORDER BY created_at DESC")
+    const expenses = await query("SELECT * FROM expenses ORDER BY date ASC")
 
     const expensesByMachine: Record<string, Array<{ id: string; date: string; description: string; amount: number }>> = {}
-    for (const row of expensesResult.rows) {
+    for (const row of expenses as any[]) {
       const mid = row.machine_id as string
       if (!expensesByMachine[mid]) expensesByMachine[mid] = []
       expensesByMachine[mid].push({
@@ -27,7 +27,7 @@ export async function GET() {
       })
     }
 
-    const machines = machinesResult.rows.map((row) => ({
+    const machinesWithExpenses = (machines as any[]).map((row) => ({
       id: row.id as string,
       item: row.item as string,
       purchaseDate: row.purchase_date as string,
@@ -47,7 +47,7 @@ export async function GET() {
       expenses: expensesByMachine[row.id as string] || [],
     }))
 
-    return NextResponse.json(machines)
+    return NextResponse.json(machinesWithExpenses)
   } catch (error) {
     console.error("Error fetching machines:", error)
     return NextResponse.json({ error: "Failed to fetch machines" }, { status: 500 })
@@ -60,10 +60,10 @@ export async function POST(request: Request) {
     const id = generateUUID()
     const now = new Date().toISOString()
 
-    await turso.execute({
-      sql: `INSERT INTO machines (id, item, purchase_date, purchased_by, item_number, serial, hours, cost, transport, location, observations, sale_status, photo, sale_price, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
+    await query(
+      `INSERT INTO machines (id, item, purchase_date, purchased_by, item_number, serial, hours, cost, transport, location, observations, sale_status, photo, sale_price, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
         id,
         data.item,
         data.purchaseDate,
@@ -80,17 +80,20 @@ export async function POST(request: Request) {
         data.salePrice || 0,
         now,
         now,
-      ],
-    })
+      ]
+    )
 
     // Insert expenses if any
     if (data.expenses && data.expenses.length > 0) {
       for (const expense of data.expenses) {
         const expId = expense.id || generateUUID()
-        await turso.execute({
-          sql: "INSERT INTO expenses (id, machine_id, date, description, amount) VALUES (?, ?, ?, ?, ?)",
-          args: [expId, id, expense.date, expense.description, expense.amount],
-        })
+        await query("INSERT INTO expenses (id, machine_id, date, description, amount) VALUES (?, ?, ?, ?, ?)", [
+          expId,
+          id,
+          expense.date,
+          expense.description,
+          expense.amount,
+        ])
       }
     }
 

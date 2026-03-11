@@ -1,4 +1,4 @@
-import { turso } from "@/lib/turso"
+import { query } from "@/lib/mysql"
 import { NextResponse } from "next/server"
 
 export async function PUT(
@@ -8,16 +8,17 @@ export async function PUT(
   try {
     const { id: machineId, expenseId } = await params
     const data = await request.json()
+    const now = new Date().toISOString()
 
-    await turso.execute({
-      sql: "UPDATE expenses SET date = ?, description = ?, amount = ? WHERE id = ? AND machine_id = ?",
-      args: [data.date, data.description, data.amount, expenseId, machineId],
-    })
+    await query("UPDATE expenses SET date = ?, description = ?, amount = ? WHERE id = ? AND machine_id = ?", [
+      data.date,
+      data.description,
+      data.amount,
+      expenseId,
+      machineId,
+    ])
 
-    await turso.execute({
-      sql: "UPDATE machines SET updated_at = ? WHERE id = ?",
-      args: [new Date().toISOString(), machineId],
-    })
+    await query("UPDATE machines SET updated_at = ? WHERE id = ?", [now, machineId])
 
     return NextResponse.json({ id: expenseId, ...data })
   } catch (error) {
@@ -32,16 +33,11 @@ export async function DELETE(
 ) {
   try {
     const { id: machineId, expenseId } = await params
+    const now = new Date().toISOString()
 
-    await turso.execute({
-      sql: "DELETE FROM expenses WHERE id = ? AND machine_id = ?",
-      args: [expenseId, machineId],
-    })
+    await query("DELETE FROM expenses WHERE id = ? AND machine_id = ?", [expenseId, machineId])
 
-    await turso.execute({
-      sql: "UPDATE machines SET updated_at = ? WHERE id = ?",
-      args: [new Date().toISOString(), machineId],
-    })
+    await query("UPDATE machines SET updated_at = ? WHERE id = ?", [now, machineId])
 
     return NextResponse.json({ success: true })
   } catch (error) {

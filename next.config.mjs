@@ -6,7 +6,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ["@libsql/client"],
+  serverExternalPackages: ["mysql2"],
 }
 
 export default nextConfig
+
