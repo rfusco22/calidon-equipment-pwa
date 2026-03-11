@@ -30,29 +30,21 @@ export type MachineFormData = Omit<Machine, "id" | "createdAt" | "updatedAt">
 
 // API fetchers (for SWR)
 export const fetchMachines = async (url: string): Promise<Machine[]> => {
-  console.log("[v0] fetchMachines called with url:", url)
   const res = await fetch(url)
   if (!res.ok) {
     const body = await res.text()
-    console.error("[v0] fetchMachines error:", res.status, body)
     throw new Error(`Failed to fetch machines: ${res.status} ${body}`)
   }
-  const data = await res.json()
-  console.log("[v0] fetchMachines returned", data.length, "machines")
-  return data
+  return res.json()
 }
 
 export const fetchMachine = async (url: string): Promise<Machine> => {
-  console.log("[v0] fetchMachine called with url:", url)
   const res = await fetch(url)
   if (!res.ok) {
     const body = await res.text()
-    console.error("[v0] fetchMachine error:", res.status, body)
     throw new Error(`Failed to fetch machine: ${res.status} ${body}`)
   }
-  const data = await res.json()
-  console.log("[v0] fetchMachine returned:", data.id, data.item)
-  return data
+  return res.json()
 }
 
 // Mutation helpers
