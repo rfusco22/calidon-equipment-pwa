@@ -12,14 +12,6 @@ function generateUUID(): string {
 
 export async function GET() {
   try {
-    // Check if environment variables are set
-    if (!process.env.MYSQL_HOST || !process.env.MYSQL_USER || !process.env.MYSQL_DATABASE) {
-      return NextResponse.json(
-        { error: "Database not configured. Please set MySQL environment variables." },
-        { status: 503 }
-      )
-    }
-
     const machines = await query("SELECT * FROM machines ORDER BY created_at DESC")
     const expenses = await query("SELECT * FROM expenses ORDER BY date ASC")
 
