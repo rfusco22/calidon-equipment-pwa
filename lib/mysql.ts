@@ -1,13 +1,18 @@
 import mysql from 'mysql2/promise'
 
-let pool: mysql.Pool
+let pool: mysql.Pool | null = null
 
 export async function getConnection() {
+  // Validate environment variables
+  if (!process.env.MYSQL_HOST || !process.env.MYSQL_USER || !process.env.MYSQL_DATABASE) {
+    throw new Error('MySQL environment variables not configured: MYSQL_HOST, MYSQL_USER, MYSQL_DATABASE are required')
+  }
+
   if (!pool) {
     pool = mysql.createPool({
       host: process.env.MYSQL_HOST,
       user: process.env.MYSQL_USER,
-      password: process.env.MYSQL_PASSWORD,
+      password: process.env.MYSQL_PASSWORD || '',
       database: process.env.MYSQL_DATABASE,
       port: parseInt(process.env.MYSQL_PORT || '3306'),
       waitForConnections: true,
